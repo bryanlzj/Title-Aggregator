@@ -1,56 +1,61 @@
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
+import time
 
-BASE_URL = "https://www.theverge.com/archives/{}/{}/{}"
 
-
-def scrape_day(year, month, day):
-    url = BASE_URL.format(year, month, day)
+def fetch_articles_for_month(year, month):
+    url = f"https://www.theverge.com/archives/{year}/{month:02d}/1"
     print(f"Scraping {url}")
     try:
         response = requests.get(url, timeout=10)
         response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
-        articles = []
-
-        for a in soup.find_all("a", href=True, class_="_1lkmsmo1"):
-            title = a.get_text(strip=True)
-            href = a["href"]
-            if title and href.startswith("/"):
-                full_url = "https://www.theverge.com" + href
-                articles.append((datetime(year, month, day), title, full_url))
-
-        return articles
-    except Exception as e:
-        print(f"❌ Failed {url}: {e}")
+    except requests.RequestException as e:
+        print(f"❌ Failed to fetch {url}: {e}")
         return []
 
-
-def get_dates():
-    dates = []
-    start = datetime(2022, 1, 1)
-    end = datetime(2025, 6, 1)
-    while start <= end:
-        dates.append((start.year, start.month, 1))  # scrape 1st of every month
-        if start.month == 12:
-            start = datetime(start.year + 1, 1, 1)
-        else:
-            start = datetime(start.year, start.month + 1, 1)
-    return dates
-
-
-def scrape_all():
+    soup = BeautifulSoup(response.text, "html.parser")
     articles = []
-    dates = get_dates()
+
+    for a_tag in soup.find_all("a", class_="_1lkmsmo1", href=True):
+        title = a_tag.get_text(strip=True)
+        href = a_tag["href"]
+        full_url = f"https://www.theverge.com{href}" if href.startswith(
+            "/") else href
+
+        # Extract date from URL
+        try:
+            parts = href.split("/")
+            pub_date = datetime(int(parts[1]), int(parts[2]), int(parts[3]))
+        except (IndexError, ValueError):
+            continue
+
+        if pub_date >= datetime(2022, 1, 1):
+            articles.append((pub_date, title, full_url))
+
+    return articles[:1]  # Only get one article per month
+
+
+def scrape_the_verge():
+    articles = []
+    seen = set()
+    years = [2022, 2023, 2024, 2025]
+    months = list(range(1, 13))
 
     with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = [executor.submit(scrape_day, y, m, d) for (y, m, d) in dates]
+        futures = []
+        for year in years:
+            for month in months:
+                futures.append(executor.submit(
+                    fetch_articles_for_month, year, month))
 
-        for future in as_completed(futures):
-            result = future.result()
-            if result:
-                articles.extend(result)
+        for future in futures:
+            month_articles = future.result()
+            for article in month_articles:
+                if article[2] not in seen:
+                    seen.add(article[2])
+                    articles.append(article)
+            time.sleep(0.1)  # Add small delay to avoid hitting site too hard
 
-    return sorted(articles, key=lambda x: x[0], reverse=True)
+    return sorted(articles, reverse=True)
