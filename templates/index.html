@@ -1,28 +1,47 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 
 <head>
     <meta charset="UTF-8">
-    <title>Scraped Articles</title>
+    <title>The Verge Articles</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        a {
+            text-decoration: underline;
+            color: #0056b3;
+        }
+
+        h2 {
+            margin-bottom: 10px;
+        }
+
+        ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+    </style>
 </head>
 
 <body>
-    <h1>Articles from The Verge</h1>
-
-    {% if articles %}
+    <h2>Articles from The Verge</h2>
     <ul>
-        {% for article in articles %}
+        {% for pub_date, title, url in articles %}
         <li>
-            <a href="{{ article[2] }}" target="_blank" style="color: #1a0dab; text-decoration: underline;">
-                {{ article[1] }}
-            </a> ({{ article[0].strftime('%Y-%m-%d') }})
+            <a href="{{ url }}" target="_blank">{{ title }}</a>
+            <br>
+            <small>{{ pub_date.strftime('%Y-%m-%d') }}</small>
         </li>
         {% endfor %}
     </ul>
-    <p><i>Note: This displays one scraped article per month from The Verge.</i></p>
-    {% else %}
-    <p>No articles found.</p>
-    {% endif %}
+    <p><strong>Note:</strong> This displays one scraped article per month from The Verge.</p>
 </body>
 
 </html>

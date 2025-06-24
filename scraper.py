@@ -36,7 +36,7 @@ def fetch_articles_for_month(year, month):
                 articles.append((pub_date, title, full_url))
 
     print(f"✅ {len(articles)} articles found for {year}-{month:02d}")
-    return articles[:1]
+    return articles  # only return one article per month
 
 
 def scrape_the_verge():
@@ -46,11 +46,8 @@ def scrape_the_verge():
     months = range(1, 13)
 
     with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = []
-        for year in years:
-            for month in months:
-                futures.append(executor.submit(
-                    fetch_articles_for_month, year, month))
+        futures = [executor.submit(fetch_articles_for_month, y, m)
+                   for y in years for m in months]
 
         for future in futures:
             try:
@@ -59,7 +56,7 @@ def scrape_the_verge():
                     if article[2] not in seen:
                         seen.add(article[2])
                         articles.append(article)
-                time.sleep(0.1)  # slight delay to avoid rate limiting
+                time.sleep(0.1)
             except Exception as e:
                 print(f"❌ Error processing future: {e}")
 
