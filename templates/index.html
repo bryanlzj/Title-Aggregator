@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>The Verge Articles</title>
+</head>
+
+<body>
+    <h1>Scraped Articles from The Verge</h1>
+    {% if articles %}
+    <ul>
+        {% for pub_date, title, url in articles %}
+        <li><a href="{{ url }}" target="_blank">{{ title }}</a> ({{ pub_date.date() }})</li>
+        {% endfor %}
+    </ul>
+    <p style="margin-top: 20px; font-style: italic; color: #555;">
+        *Note: This page shows one article per month from The Verge starting January 2022.
+    </p>
+    {% else %}
+    <p>No articles found.</p>
+    {% endif %}
+</body>
+
+</html>
