@@ -36,7 +36,7 @@ def fetch_articles_for_month(year, month):
                 articles.append((pub_date, title, full_url))
 
     print(f"✅ {len(articles)} articles found for {year}-{month:02d}")
-    return articles  # All articles, not just one
+    return articles[:1]
 
 
 def scrape_the_verge():
