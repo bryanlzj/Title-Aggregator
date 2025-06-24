@@ -1,3 +1,5 @@
+import os
+import json
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
@@ -5,6 +7,33 @@ from concurrent.futures import ThreadPoolExecutor
 import time
 import re
 from urllib.parse import urlparse
+
+CACHE_FILE = 'cached_articles.json'
+
+
+def load_cache():
+    if os.path.exists(CACHE_FILE):
+        try:
+            with open(CACHE_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return [(datetime.fromisoformat(d[0]), d[1], d[2]) for d in data]
+        except Exception as e:
+            print(f"❌ Failed to load cache: {e}")
+    return []
+
+
+def save_cache(articles):
+    try:
+        with open(CACHE_FILE, 'w', encoding='utf-8') as f:
+            json.dump([(d[0].isoformat(), d[1], d[2])
+                      for d in articles], f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"❌ Failed to save cache: {e}")
+
+
+def normalize_url(url):
+    parsed = urlparse(url)
+    return f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
 
 
 def fetch_articles_for_month(year, month):
@@ -37,16 +66,15 @@ def fetch_articles_for_month(year, month):
                 articles.append((pub_date, title, full_url))
 
     print(f"✅ {len(articles)} articles found for {year}-{month:02d}")
-    return articles  # only return one article per month
-
-
-def normalize_url(url):
-    # Remove trailing slashes, queries, and fragments
-    parsed = urlparse(url)
-    return f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+    return articles
 
 
 def scrape_the_verge():
+    cached = load_cache()
+    if cached:
+        print("✅ Loaded articles from cache.")
+        return sorted(cached, reverse=True)
+
     articles = []
     seen = set()
     years = [2022, 2023, 2024, 2025]
@@ -70,4 +98,6 @@ def scrape_the_verge():
             except Exception as e:
                 print(f"❌ Error processing future: {e}")
 
+    save_cache(articles)
+    print("💾 Articles saved to cache.")
     return sorted(articles, reverse=True)
