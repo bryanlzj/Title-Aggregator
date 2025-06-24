@@ -4,6 +4,7 @@ from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 import time
 import re
+from urllib.parse import urlparse
 
 
 def fetch_articles_for_month(year, month):
@@ -39,6 +40,12 @@ def fetch_articles_for_month(year, month):
     return articles  # only return one article per month
 
 
+def normalize_url(url):
+    # Remove trailing slashes, queries, and fragments
+    parsed = urlparse(url)
+    return f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+
+
 def scrape_the_verge():
     articles = []
     seen = set()
@@ -46,16 +53,19 @@ def scrape_the_verge():
     months = range(1, 13)
 
     with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = [executor.submit(fetch_articles_for_month, y, m)
-                   for y in years for m in months]
+        futures = [
+            executor.submit(fetch_articles_for_month, year, month)
+            for year in years for month in months
+        ]
 
         for future in futures:
             try:
                 month_articles = future.result()
-                for article in month_articles:
-                    if article[2] not in seen:
-                        seen.add(article[2])
-                        articles.append(article)
+                for pub_date, title, url in month_articles:
+                    clean_url = normalize_url(url)
+                    if clean_url not in seen:
+                        seen.add(clean_url)
+                        articles.append((pub_date, title, url))
                 time.sleep(0.1)
             except Exception as e:
                 print(f"❌ Error processing future: {e}")
